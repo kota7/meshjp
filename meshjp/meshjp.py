@@ -242,9 +242,8 @@ def contained_mesh(g, level):
     -------
     List of mesh codes inside the geometry
     """
-    # want to find mesh areas that is 
     # mesh_cover finds mesh areas that intersects with g
-    # {m: m U g != empty}
+    # cotained mesh should be a subset of covers
     meshes = mesh_cover(g, level, rectonly=True)
     coords = mesh_coord(meshes)
     meshes = [m for m, c in zip(meshes, zip(*coords)) if g.contains(box(*c))]
