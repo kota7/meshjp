@@ -2,7 +2,7 @@
 
 import itertools
 import numpy as np
-from shapely.geometry import box
+import shapely.geometry
 
 
 MESH_LEVEL_ALIAS = {
@@ -34,7 +34,14 @@ def mesh_size_in_lonlat(level):
     return MESH_SIZE_LONLAT[level]
 
 
-def mesh_aliases():
+def mesh_level_aliases():
+    """
+    Mesh level aliases
+    
+    Returns
+    -------
+    Dictionary of mesh level aliases
+    """
     return dict(v for v in MESH_LEVEL_ALIAS.items())
 
 
@@ -59,12 +66,12 @@ def containing_mesh(lon, lat, level):
     level: int/str
         Mesh level. If int, 1-6.
         Intuitive str expression is also allowed (e.g. "500m").
-        See mesh_aliases().
+        See mesh_level_aliases() for possible level expressions.
     
     Returns
     -------
-    meshcode in int if scalar lon, lat is given.
-    meshcode in numpy.array of type int
+    meshcode as int if lon, lat are scalar.
+    meshcode as numpy.array of type int if lon, lat are sequences.
     """
     level = _get_mesh_level(level)
     assert level in [1, 2, 3, 4, 5, 6], "Only level 1-6 is supported"
@@ -72,7 +79,10 @@ def containing_mesh(lon, lat, level):
     lon = np.array(lon)
     lat = np.array(lat)
 
+    # Output parser for convenience.
+    # Extract a single element array to a scalar.
     _parse = lambda x: x.item() if len(x.shape) == 0 else x
+    
     # level 1
     x = lon - 100; y = lat * 1.5
     a = np.floor(x).astype(np.int64); b = np.floor(y).astype(np.int64)
@@ -104,13 +114,13 @@ def containing_mesh(lon, lat, level):
     raise ValueError("level must be 1-6")
 
 
-def mesh_center(x):
+def mesh_center(mesh):
     """
     Center coordinates of mesh areas
     
     Parameters
     ----------
-    x: int/str/list/numpy.array
+    mesh: int/str/list/numpy.array
         mesh code.  If sequence, all codes must be of the same level.
     
     Returns
@@ -118,17 +128,17 @@ def mesh_center(x):
     Tuple of lon, lat.
     Shape of each element matches the shape of x.
     """
-    x1, y1, x2, y2 = mesh_coord(x)
+    x1, y1, x2, y2 = mesh_coord(mesh)
     return (x1 + x2) / 2.0, (y1 + y2) / 2.0
 
 
-def mesh_coord(x):
+def mesh_coord(mesh):
     """
     Coordinates of mesh areas
     
     Parameters
     ----------
-    x: int/str/list/numpy.array
+    mesh: int/str/list/numpy.array
         mesh code.  If sequence, all codes must be of the same level.
     
     Returns
@@ -136,7 +146,7 @@ def mesh_coord(x):
     Tuple of lon1, lat1, lon2, lat2
     Shape of each element matches the shape of x.
     """
-    x = np.array(x).astype(np.int64)    
+    x = np.array(mesh).astype(np.int64)    
     digits = np.floor(np.log10(x)).astype(int) + 1
     if len(digits.shape) > 0:
         digits = np.unique(digits)
@@ -190,7 +200,30 @@ def mesh_coord(x):
     # This part shouldn't be reached
     raise ValueError("level must be 1-6")
 
+
+def mesh_polygon(mesh):
+    """
+    Mesh area(s) as polygon object
+
+    Parameters
+    ----------
+    mesh: int/str/list/numpy.array
+        mesh code.  If sequence, all codes must be of the same level.
     
+    Returns
+    -------
+    shapely.geometry.Polygon if mesh is scalar.
+    List of shapely.geometry.Polygon if mesh is a sequence.
+    """
+    mesh = np.array(mesh).astype(np.int64)
+    coords = mesh_coord(mesh)
+    rects = [shapely.geometry.box(*c) for c in zip(*coords)]
+    if len(rects) == 1:
+        return rects[0]
+    else:
+        return rects
+
+
 def mesh_cover(g, level, rectonly=False):
     """
     Find a set of mesh areas that cover a geometry
@@ -219,12 +252,13 @@ def mesh_cover(g, level, rectonly=False):
         np.arange(centy[0], centy[1] + h, h)
     ))
     meshes = containing_mesh(lons, lats, level=level)
-    if rectonly: return meshes
 
-    # filter out meshes that do not intersect with g
-    coords = mesh_coord(meshes)
-    meshes = [m for m, c in zip(meshes, zip(*coords)) if box(*c).intersects(g)]
-    return meshes
+    rects = mesh_polygon(meshes)
+    tmp = [(m, r.intersection(g).area / r.area) \
+           for m, r in zip(meshes, rects) if rectonly or r.intersects(g)]
+    
+    meshes, fractions = zip(*tmp)
+    return meshes, fractions
 
 
 def contained_mesh(g, level):
@@ -244,7 +278,7 @@ def contained_mesh(g, level):
     """
     # mesh_cover finds mesh areas that intersects with g
     # cotained mesh should be a subset of covers
-    meshes = mesh_cover(g, level, rectonly=True)
-    coords = mesh_coord(meshes)
-    meshes = [m for m, c in zip(meshes, zip(*coords)) if g.contains(box(*c))]
+    meshes, fracs = mesh_cover(g, level, rectonly=True)
+    contained = np.isclose(fracs, 1.0)
+    meshes = [m for m, c in zip(meshes, contained) if c]
     return meshes

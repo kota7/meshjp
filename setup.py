@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='meshjp',
-    version='0.0.1',
+    version='0.1.0Dev',
     description='Mesh GIS for Japan',
     author='Kota Mori',
     author_email='kmori05@gmail.com',
