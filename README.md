@@ -6,6 +6,9 @@
 
 Japan's Mesh GIS Parser for Python
 
+See [usage](https://nbviewer.jupyter.org/github/kota7/meshjp/blob/master/examples/example.ipynb).
+
+
 ## Links
 
 * [Mesh definition](https://www.gikosha.co.jp/fig_blog/mesh.html)
