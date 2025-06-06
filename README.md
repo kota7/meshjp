@@ -1,8 +1,8 @@
 # meshjp
 
-[![travis-badge](https://travis-ci.org/kota7/meshjp.svg?branch=master)](https://travis-ci.org/kota7/meshjp)
 [![appveyor-badge](https://ci.appveyor.com/api/projects/status/u4gciajlthpq9s6v/branch/master?svg=true)](https://ci.appveyor.com/project/kota7/meshjp/branch/master)
 [![pypi-badge](https://badge.fury.io/py/meshjp.svg)](https://badge.fury.io/py/meshjp)
+[![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/kota7/meshjp)
 
 Japan's Mesh GIS Parser for Python
 
